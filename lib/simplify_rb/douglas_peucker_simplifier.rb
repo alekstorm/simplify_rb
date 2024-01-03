@@ -2,11 +2,11 @@
 
 module SimplifyRb
   class DouglasPeuckerSimplifier
-    def process(points, sq_tolerance)
+    def process(points, sq_tolerance, sq_gap_tolerance)
       points.first.keep = true
       points.last.keep  = true
 
-      simplify_douglas_peucker(points, sq_tolerance)
+      simplify_douglas_peucker(points, sq_tolerance, sq_gap_tolerance)
         .select(&:keep)
     end
 
@@ -14,7 +14,7 @@ module SimplifyRb
 
     MaxSqDist = Struct.new(:max_sq_dist, :index)
 
-    def simplify_douglas_peucker(points, sq_tolerance)
+    def simplify_douglas_peucker(points, sq_tolerance, sq_gap_tolerance)
       first_i = 0
       last_i  = points.length - 1
       index = nil
@@ -24,7 +24,13 @@ module SimplifyRb
         result = calc_max_sq_dist(first_i, last_i, points)
         index = result.index
 
-        if result.max_sq_dist > sq_tolerance
+        keep = result.max_sq_dist > sq_tolerance
+        if !keep && !index.nil? && !sq_gap_tolerance.nil?
+          new_seg_dist = points[first_i].get_sq_dist_to(points[last_i])
+          keep = new_seg_dist > sq_gap_tolerance
+        end
+
+        if keep
           points[index].keep = true
 
           stack.push(first_i, index, index, last_i)
